@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from image_loader.skeleton import fib
+from image_loader.loader import fib
 
 __author__ = "thron7"
 __copyright__ = "thron7"
