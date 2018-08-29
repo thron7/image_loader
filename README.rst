@@ -3,13 +3,13 @@ image_loader
 ============
 
 
-Add a short description here!
+A tool to load images from the internet.
 
 
-Description
-===========
+Instructions
+============
 
-A longer description of your project goes here...
+- `python setup.py install` to create distribution for the tool
 
 
 Note

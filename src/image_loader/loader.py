@@ -30,7 +30,7 @@ __license__ = "mit"
 _logger = logging.getLogger(__name__)
 
 
-def fib(n):
+def load(n):
     """Fibonacci example function
 
     Args:
