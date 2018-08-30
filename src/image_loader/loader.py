@@ -1,25 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-This is a skeleton file that can serve as a starting point for a Python
-console script. To run this script uncomment the following line in the
-entry_points section in setup.py:
-
-    [console_scripts]
-    fibonacci = image_loader.skeleton:run
-
-Then run `python setup.py install` which will install the command `fibonacci`
-inside your current environment.
-Besides console scripts, the header (i.e. until _logger...) of this file can
-also be used as template for Python modules.
-
-Note: This skeleton file can be safely removed if not needed!
+  loader -- a tool to load images from the internet
 """
 from __future__ import division, print_function, absolute_import
 
 import argparse
 import sys
 import logging
+import os
+
+import urllib.request
+import shutil
 
 from image_loader import __version__
 
@@ -30,20 +22,34 @@ __license__ = "mit"
 _logger = logging.getLogger(__name__)
 
 
-def load(n):
-    """Fibonacci example function
+def is_real_string(s):
+    """Check if s is a string with contents"""
+    return s and s.strip()
 
-    Args:
-      n (int): integer
 
-    Returns:
-      int: n-th Fibonacci number
-    """
-    assert n > 0
-    a, b = 1, 1
-    for i in range(n-1):
-        a, b = b, a+b
-    return a
+def get_url_iter(fpath):
+    assert is_real_string(fpath), "Empty file path: {}".format(fpath)
+    with open(fpath, 'r') as url_file:
+        for url in url_file.readlines():
+            yield url
+
+
+def download_url(url, outdir):
+    assert is_real_string(url), "Empty URL: {}".format(url)
+    file_name = os.path.join(outdir, os.path.basename(url))
+    with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
+        if response and response.code == 200:
+            shutil.copyfileobj(response, out_file)
+        else:
+            _logger.error("Unable to download url: {} - error: {} - {}".format(
+                url, response.code, response.msg))
+
+
+def load(urlfile, destdir):
+    """Download images with URLs from file into destdir"""
+    with get_url_iter(urlfile) as urls:
+        for url in urls:
+            download_url(url, destdir)
 
 
 def parse_args(args):
@@ -56,16 +62,23 @@ def parse_args(args):
       :obj:`argparse.Namespace`: command line parameters namespace
     """
     parser = argparse.ArgumentParser(
-        description="Just a Fibonnaci demonstration")
+        description="Download images listed in a file")
     parser.add_argument(
         '--version',
         action='version',
         version='image_loader {ver}'.format(ver=__version__))
     parser.add_argument(
-        dest="n",
-        help="n-th Fibonacci number",
-        type=int,
-        metavar="INT")
+        dest="fpath",
+        help="file path with image URLs, one per line",
+        type=str,
+        metavar="URLFILE")
+    parser.add_argument(
+        #'-o',
+        #'--outdir',
+        dest="outdir",
+        help="local output directory",
+        type=str,
+        metavar="DIRECTORY")
     parser.add_argument(
         '-v',
         '--verbose',
@@ -102,8 +115,9 @@ def main(args):
     """
     args = parse_args(args)
     setup_logging(args.loglevel)
-    _logger.debug("Starting crazy calculations...")
-    print("The {}-th Fibonacci number is {}".format(args.n, fib(args.n)))
+    _logger.debug("Starting downloading images...")
+    #print("The {}-th Fibonacci number is {}".format(args.n, fib(args.n)))
+    load(args.fpath, args.outdir)
     _logger.info("Script ends here")
 
 

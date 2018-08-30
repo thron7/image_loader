@@ -14,7 +14,7 @@ from setuptools import setup
 # Add here console scripts and other entry points in ini-style format
 entry_points = """
 [console_scripts]
-loader = image_loader.loader:load
+loader = image_loader.loader:run
 # For example:
 # fibonacci = image_loader.skeleton:run
 """
