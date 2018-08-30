@@ -27,26 +27,42 @@ def is_real_string(s):
     return s and s.strip()
 
 
-def get_url_iter(fpath):
-    assert is_real_string(fpath), "Empty file path: {}".format(fpath)
-    with open(fpath, 'r') as url_file:
-        for url in url_file.readlines():
-            yield url
-
-
 def download_url(url, outdir):
-    assert is_real_string(url), "Empty URL: {}".format(url)
+    url = url.strip()
+    if not is_real_string(url):
+        return
     file_name = os.path.join(outdir, os.path.basename(url))
     with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
         if response and response.code == 200:
+            _logger.info("Downloading image: {}".format(url))
+            # TODO: check contents-type of response, e.g. image/png etc.?
+            # TODO: control the mode of the target file?
+            # TODO: catch exception of copyfileobj?
+            # TODO: try HEAD for existing files?
+            # TODO: control timing, so we don't overrun the 5min interval?
+            # TODO: fork out multiple "threads", to load images in parallel?
             shutil.copyfileobj(response, out_file)
         else:
             _logger.error("Unable to download url: {} - error: {} - {}".format(
                 url, response.code, response.msg))
 
 
+def get_url_iter(fpath):
+    assert is_real_string(fpath), "Empty file path: {}".format(fpath)
+    return open(fpath, 'r')
+
+
+def assert_destdir(dirpath):
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath, mode=0o750)
+    else:
+        assert os.path.isdir(dirpath) and os.access(dirpath, os.W_OK|os.X_OK), \
+               "Output dir is either not a directory or not writeable: {}".format(dirpath)
+
+
 def load(urlfile, destdir):
     """Download images with URLs from file into destdir"""
+    assert_destdir(destdir)
     with get_url_iter(urlfile) as urls:
         for url in urls:
             download_url(url, destdir)
