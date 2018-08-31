@@ -35,13 +35,14 @@ def download_url(url, outdir):
     with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
         if response and response.code == 200:
             _logger.info("Downloading image: {}".format(url))
-            # TODO: check contents-type of response, e.g. image/png etc.?
-            # TODO: control the mode of the target file?
-            # TODO: catch exception of copyfileobj?
-            # TODO: try HEAD for existing files?
-            # TODO: control timing, so we don't overrun the 5min interval?
-            # TODO: fork out multiple "threads", to load images in parallel?
-            shutil.copyfileobj(response, out_file)
+            # TODO: 
+            # - check contents-type of response, e.g. image/png etc.?
+            # - control the mode of the target file?
+            # - try HEAD for existing files?
+            # - control timing, so we don't overrun the 5min interval?
+            # - fork out multiple "threads", to load images in parallel?
+            # - lock currently downloaded file
+            shutil.copyfileobj(response, out_file) # let exceptions like OSError propagate
         else:
             _logger.error("Unable to download url: {} - error: {} - {}".format(
                 url, response.code, response.msg))
