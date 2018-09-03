@@ -9,17 +9,25 @@ import argparse
 import sys
 import logging
 import os
+import errno
+import fcntl
+import time
+from functools import reduce
 
 import urllib.request
 import shutil
+from pymaybe import maybe
 
 from image_loader import __version__
 
-__author__ = "thron7"
-__copyright__ = "thron7"
-__license__ = "mit"
-
 _logger = logging.getLogger(__name__)
+RequestTimeoutSecs = 10
+
+
+def pipeline(seed, *funcs):
+    """compose functions where the return value of one is the argument
+       to the next, starting with the <seed> data."""
+    return reduce(lambda accu,func: func(accu), funcs, seed)
 
 
 def is_real_string(s):
@@ -27,25 +35,66 @@ def is_real_string(s):
     return s and s.strip()
 
 
+def file_mtime(outfile):
+    if not os.path.exists(outfile):
+        return 0  # fake mtime, everything should be younger than that
+    else:
+        return os.stat(outfile).st_mtime
+
+
+def format_date(epocsecs):
+    "Format epoc secs to a time string suitable for If-Modified-Since"
+    t = time.gmtime(epocsecs)
+    s = "Mon Tue Wed Thu Fri Sat Sun".split()[t.tm_wday] + ", "
+    s += "%02d " % (t.tm_mday,)
+    s += "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()[t.tm_mon - 1] + " "
+    s += "%d %02d:%02d:%02d GMT" % (t.tm_year, t.tm_hour, t.tm_min, t.tm_sec)
+    return s
+
+
+def get_out_file(url, outdir):
+    return os.path.join(outdir, os.path.basename(url))
+
+
+def process_incoming(response, outdir):
+    if maybe(response.info()).get_content_maintype() != 'image':
+        _logger.error("Apparently not an image file, skipping: {}".format(response.url))
+    else:
+        file_name = get_out_file(response.url, outdir)
+        with open(file_name, 'wb') as out_file:
+            # try locking the out_file, to allow for overlapping runs of the script
+            # or a Web server opening the file for reading (provided it uses locking too)
+            try:
+                fcntl.lockf(out_file, fcntl.LOCK_EX | fcntl.LOCK_NB)  # POSIX locking should be enough for Debian deployments
+            except OSError as e:
+                if e.errno in (errno.EACCESS, errno.EAGAIN):
+                    _logger.error("Cannot obtain lock for localfile, skipping: {}".format(file_name))
+                else:
+                    raise
+            else:
+                _logger.info("Downloading image: {}".format(response.url))
+                shutil.copyfileobj(response, out_file) # let exceptions like OSError propagate
+
+
 def download_url(url, outdir):
     url = url.strip()
     if not is_real_string(url):
         return
-    file_name = os.path.join(outdir, os.path.basename(url))
-    with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
-        if response and response.code == 200:
-            _logger.info("Downloading image: {}".format(url))
-            # TODO: 
-            # - check contents-type of response, e.g. image/png etc.?
-            # - control the mode of the target file?
-            # - try HEAD for existing files?
-            # - control timing, so we don't overrun the 5min interval?
-            # - fork out multiple "threads", to load images in parallel?
-            # - lock currently downloaded file
-            shutil.copyfileobj(response, out_file) # let exceptions like OSError propagate
-        else:
-            _logger.error("Unable to download url: {} - error: {} - {}".format(
-                url, response.code, response.msg))
+    else:
+        request = urllib.request.Request(url)
+        # avoid unnecessary re-downloads
+        #request.add_header('If-Modified-Since', pipeline(get_out_file(url, outdir)
+        #                                                 , file_mtime
+        #                                                 , format_date))
+        # TODO: fork out multiple threads, to load images in parallel?
+        with urllib.request.urlopen(request, timeout=RequestTimeoutSecs) as response:
+            if response and response.code == 200:
+                process_incoming(response, outdir)
+            elif response and response.code == 304:
+                _logger.info("Local copy of url is fresh: {}".format(url))
+            else:
+                _logger.error("Unable to download url: {} - error: {} - {}".format(
+                    url, response.code, response.msg))
 
 
 def get_url_iter(fpath):
