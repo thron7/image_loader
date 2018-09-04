@@ -17,7 +17,6 @@ from functools import reduce
 import urllib.request
 import shutil
 from pymaybe import maybe
-import urllib3
 
 from image_loader import __version__
 
@@ -58,13 +57,13 @@ def get_out_file(url, outdir):
 
 
 def process_incoming(response, outdir):
-    if not maybe(response.info().get('Content-Type')).or_else("").startswith('image/'):
-        _logger.error("Apparently not an image file, skipping: {}".format(response.geturl()))
+    if maybe(response.info()).get_content_maintype() != 'image':
+        _logger.error("Apparently not an image file, skipping: {}".format(response.url))
     else:
-        file_name = get_out_file(response.geturl(), outdir)
+        file_name = get_out_file(response.url, outdir)
         with open(file_name, 'wb') as out_file:
             # try locking the out_file, to allow for overlapping runs of the script
-            # or a local Web server opening the file for reading (provided it uses locking too)
+            # or a Web server opening the file for reading (provided it uses locking too)
             try:
                 fcntl.lockf(out_file, fcntl.LOCK_EX | fcntl.LOCK_NB)  # POSIX locking should be enough for Debian deployments
             except OSError as e:
@@ -73,41 +72,11 @@ def process_incoming(response, outdir):
                 else:
                     raise
             else:
-                _logger.info("Downloading image: {}".format(response.geturl()))
+                _logger.info("Downloading image: {}".format(response.url))
                 shutil.copyfileobj(response, out_file) # let exceptions like OSError propagate
 
 
-def download_url(pool, url, outdir, force):
-    url = url.strip()
-    if not is_real_string(url):
-        return
-    else:
-        headers = {}
-        if not force:
-            headers.update({'If-Modified-Since' : pipeline(get_out_file(url, outdir)
-                                                           , file_mtime
-                                                           , format_date)
-                          })
-        response = pool.request('GET'
-                        , url
-                        , timeout = RequestTimeoutSecs
-                        , preload_content = False
-                        , headers = headers
-                    )
-        # TODO: 
-        # - fork out multiple threads, to load images in parallel?
-        # - slow down requests to the same server, so not to overrun it with requests
-        # - use urllib3?
-        if response and response.status == 200:
-            process_incoming(response, outdir)
-        elif response and response.status == 304:
-            _logger.info("Local copy of url is fresh: {}".format(url))
-        else:
-            _logger.error("Unable to download url: {} - error: {} - {}".format(
-                url, response.status, response.msg))
-
-
-def download_url1(url, outdir):
+def download_url(url, outdir):
     url = url.strip()
     if not is_real_string(url):
         return
@@ -144,13 +113,12 @@ def assert_destdir(dirpath):
                "Output dir is either not a directory or not writeable: {}".format(dirpath)
 
 
-def load(urlfile, destdir, force):
+def load(urlfile, destdir):
     """Download images with URLs from file into destdir"""
     assert_destdir(destdir)
-    pool = urllib3.PoolManager()
     with get_url_iter(urlfile) as urls:
         for url in urls:
-            download_url(pool, url, destdir, force)
+            download_url(url, destdir)
 
 
 def parse_args(args):
@@ -180,13 +148,6 @@ def parse_args(args):
         help="local output directory",
         type=str,
         metavar="DIRECTORY")
-    parser.add_argument(
-        '-f',
-        '--force',
-        dest="force",
-        help="force download even if local cache is up-to-date (default; false)",
-        action='store_true',
-    )
     parser.add_argument(
         '-v',
         '--verbose',
@@ -225,7 +186,7 @@ def main(args):
     setup_logging(args.loglevel)
     _logger.debug("Starting downloading images...")
     #print("The {}-th Fibonacci number is {}".format(args.n, fib(args.n)))
-    load(args.fpath, args.outdir, args.force)
+    load(args.fpath, args.outdir)
     _logger.info("Script ends here")
 
 
