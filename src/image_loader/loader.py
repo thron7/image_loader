@@ -12,31 +12,36 @@ import os
 import errno
 import fcntl
 import time
-from functools import reduce
-
-import urllib.request
 import shutil
+from functools import reduce
+from concurrent.futures import ThreadPoolExecutor
+
 from pymaybe import maybe
 import urllib3
 
 from image_loader import __version__
 
+# - config section -------------------------------------------------------------
 _logger = logging.getLogger(__name__)
 RequestTimeoutSecs = 10
+MaxThreads = 10
+MaxHTTPConnections = MaxThreads # having more threads than connections might result in (harmless) warnings
+# - config end -----------------------------------------------------------------
 
 
 def pipeline(seed, *funcs):
-    """compose functions where the return value of one is the argument
+    """Compose functions where the return value of one is the argument
        to the next, starting with the <seed> data."""
     return reduce(lambda accu,func: func(accu), funcs, seed)
 
 
 def is_real_string(s):
-    """Check if s is a string with contents"""
+    "Check if s is a string with some contents"
     return s and s.strip()
 
 
 def file_mtime(outfile):
+    "Return the mtime epoc secs for a local path"
     if not os.path.exists(outfile):
         return 0  # fake mtime, everything should be younger than that
     else:
@@ -44,7 +49,7 @@ def file_mtime(outfile):
 
 
 def format_date(epocsecs):
-    "Format epoc secs to a time string suitable for If-Modified-Since"
+    "Format epoc secs to a time string suitable for If-Modified-Since request header"
     t = time.gmtime(epocsecs)
     s = "Mon Tue Wed Thu Fri Sat Sun".split()[t.tm_wday] + ", "
     s += "%02d " % (t.tm_mday,)
@@ -54,10 +59,12 @@ def format_date(epocsecs):
 
 
 def get_out_file(url, outdir):
+    "Construct output file path from url"
     return os.path.join(outdir, os.path.basename(url))
 
 
 def process_incoming(response, outdir):
+    "Process data from web request"
     if not maybe(response.info().get('Content-Type')).or_else("").startswith('image/'):
         _logger.error("Apparently not an image file, skipping: {}".format(response.geturl()))
     else:
@@ -78,6 +85,7 @@ def process_incoming(response, outdir):
 
 
 def download_url(pool, url, outdir, force):
+    "Make the web request"
     url = url.strip()
     if not is_real_string(url):
         return
@@ -108,12 +116,15 @@ def download_url(pool, url, outdir, force):
 
 
 def get_url_iter(fpath):
+    "Open the file with the urls"
     assert is_real_string(fpath), "Empty file path: {}".format(fpath)
     return open(fpath, 'r')
 
 
 def assert_destdir(dirpath):
+    "Make sure we can use the output directory"
     if not os.path.exists(dirpath):
+        _logger.info("Creating output directory: {}".format(dirpath))
         os.makedirs(dirpath, mode=0o750)
     else:
         assert os.path.isdir(dirpath) and os.access(dirpath, os.W_OK|os.X_OK), \
@@ -123,10 +134,11 @@ def assert_destdir(dirpath):
 def load(urlfile, destdir, force):
     """Download images with URLs from file into destdir"""
     assert_destdir(destdir)
-    pool = urllib3.PoolManager()
+    connection_pool = urllib3.PoolManager(maxsize=MaxHTTPConnections)
+    thread_pool = ThreadPoolExecutor(MaxThreads)
     with get_url_iter(urlfile) as urls:
         for url in urls:
-            download_url(pool, url, destdir, force)
+            thread_pool.submit(download_url, connection_pool, url, destdir, force)
 
 
 def parse_args(args):
@@ -200,9 +212,7 @@ def main(args):
     args = parse_args(args)
     setup_logging(args.loglevel)
     _logger.debug("Starting downloading images...")
-    #print("The {}-th Fibonacci number is {}".format(args.n, fib(args.n)))
     load(args.fpath, args.outdir, args.force)
-    _logger.info("Script ends here")
 
 
 def run():
