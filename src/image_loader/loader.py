@@ -51,8 +51,10 @@ def file_mtime(outfile):
 
 
 def format_date(epocsecs):
-    "Format epoc secs to a time string suitable for If-Modified-Since request header"
+    """Format epoc secs to a time string suitable for If-Modified-Since request header
+       Example: 'Wed, 21 Oct 2015 07:28:00 GMT'"""
     t = time.gmtime(epocsecs)
+    # rolling own, as time.strftime is in part locale-dependent (e.g. '%a' for short weekday)
     s = "Mon Tue Wed Thu Fri Sat Sun".split()[t.tm_wday] + ", "
     s += "%02d " % (t.tm_mday,)
     s += "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()[t.tm_mon - 1] + " "
