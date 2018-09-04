@@ -97,7 +97,6 @@ def download_url(pool, url, outdir, force):
         # TODO: 
         # - fork out multiple threads, to load images in parallel?
         # - slow down requests to the same server, so not to overrun it with requests
-        # - use urllib3?
         if response and response.status == 200:
             process_incoming(response, outdir)
         elif response and response.status == 304:
@@ -105,30 +104,7 @@ def download_url(pool, url, outdir, force):
         else:
             _logger.error("Unable to download url: {} - error: {} - {}".format(
                 url, response.status, response.msg))
-
-
-def download_url1(url, outdir):
-    url = url.strip()
-    if not is_real_string(url):
-        return
-    else:
-        request = urllib.request.Request(url)
-        # avoid unnecessary re-downloads
-        request.add_header('If-Modified-Since', pipeline(get_out_file(url, outdir)
-                                                         , file_mtime
-                                                         , format_date))
-        # TODO: 
-        # - fork out multiple threads, to load images in parallel?
-        # - slow down requests to the same server, so not to overrun it with requests
-        # - use urllib3?
-        with urllib.request.urlopen(request, timeout=RequestTimeoutSecs) as response:
-            if response and response.code == 200:
-                process_incoming(response, outdir)
-            elif response and response.code == 304:
-                _logger.info("Local copy of url is fresh: {}".format(url))
-            else:
-                _logger.error("Unable to download url: {} - error: {} - {}".format(
-                    url, response.code, response.msg))
+        response.release_conn()
 
 
 def get_url_iter(fpath):
