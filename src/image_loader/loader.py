@@ -21,12 +21,14 @@ import urllib3
 
 from image_loader import __version__
 
-# - config section -------------------------------------------------------------
-_logger = logging.getLogger(__name__)
+# - runtime params -------------------------------------------------------------
 RequestTimeoutSecs = 10
+MaxNumPools = 10 # this is the default; increase this with very heterogenous urls in the input, to trade space for speed
 MaxThreads = 10
-MaxHTTPConnections = MaxThreads # having more threads than connections might result in (harmless) warnings
-# - config end -----------------------------------------------------------------
+MaxHTTPConnections = MaxThreads # having more threads than connections in a pool might result in (harmless) warnings
+# - params end -----------------------------------------------------------------
+
+_logger = logging.getLogger(__name__)
 
 
 def pipeline(seed, *funcs):
@@ -132,9 +134,9 @@ def assert_destdir(dirpath):
 
 
 def load(urlfile, destdir, force):
-    """Download images with URLs from file into destdir"""
+    "Download images with URLs from file into destdir"
     assert_destdir(destdir)
-    connection_pool = urllib3.PoolManager(maxsize=MaxHTTPConnections)
+    connection_pool = urllib3.PoolManager(maxsize=MaxHTTPConnections, num_pools=MaxNumPools)
     thread_pool = ThreadPoolExecutor(MaxThreads)
     with get_url_iter(urlfile) as urls:
         for url in urls:
