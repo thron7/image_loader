@@ -29,13 +29,21 @@ Description
 Instructions
 ============
 
+Installing
+----------
+- The script requires Python > 3.3.
+- I recommend setting up a virtualenv.
+- Run ``pip install -r requirements.txt`` to install dependencies.
+
 Running
 -------
 
-- Basic invocation: ``'python loader.py <urls file> <outdir>'``. Use ``--help`` for full syntax.
+- Basic invocation: ``'python src/image_loader/loader.py <urls file> <outdir>'``. 
+  Use ``--help`` for full syntax.
 - I recommend using at least the ``-v`` flag, otherwise the script will run silently.
 - Constants, like the number of threads or connections, are in a dedicated section
   at the top of the script.
+- Run ``pytest tests`` to run the automatic tests.
 
 Deploying
 ---------

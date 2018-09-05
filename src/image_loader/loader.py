@@ -39,7 +39,7 @@ def pipeline(seed, *funcs):
 
 def is_real_string(s):
     "Check if s is a string with some contents"
-    return s and s.strip()
+    return isinstance(s, str) and bool(s.strip())
 
 
 def file_mtime(outfile):
