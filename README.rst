@@ -3,34 +3,50 @@ image_loader
 ============
 
 
-A tool to load images from the internet.
+A tool to download images from the internet.
 
 Description
 ===========
 
 - The tool will load images from the internet, the URLs of which are stored in a
   file, one URL per line. Empty lines are skipped.
-- It uses both a thread and a connection pool, to make downloads more efficient.
-- As a default, it checks for freshness of a local copy if there is already one,
-  so an up-to-date image is not re-downloaded. Use the ``--force`` switch to force
-  downloading images anyway.
 - On downloading the ``Content-Type`` is checked and only ``image/*`` is
   accepted.
-- Images are downloaded to a local directory. The path for that given on the
-  command line is checked and created if it does not already exist. If the path
-  already exists it must be a directory and must be writeable for the loader
+- Images are downloaded to a local directory. The path for that is given on the
+  command line, checked and created if it does not already exist. If the path
+  exists it must be a directory and must be writeable for the loader
   process.
-- On downloading an image the local file is locked, so concurrent downloads of the same
-  file will not interfer with each other. (This might be interesting if one
-  instance of the script is started while another is still running with the same
-  arguments.) If a lock cannot be obtained the particular URL is skipped.
+- If the number of downloaded files exceeds the number of available inodes of the target
+  directory, an exception will be thrown.
+- The tool does not take specific actions to set the access rights of the
+  downloaded file. If the images are e.g. saved in a Web server's document tree
+  it is the user's responsibility that the files are readable by the Web server.
+- Scaling
+  - The runtime complexity of the tool directly depends on the size of the input
+    file and to some extend on the diversity and responsiveness of the servers
+    that host the source images.
+  - I've implemented some defensive features to make sure the tool is
+    well-behaved in demanding situations. Parameters to customize runtime
+    behavior like memory and socket consumption are in a dedicated section in the script file. 
+  - On downloading an image the local file is locked, so concurrent downloads of the same
+    file will not interfer with each other. This might be interesting if one
+    instance of the script is started while another is still running with the same
+    arguments, which might occur e.g. when it is invoked via cron and a single
+    run takes longer than the time until the next invocation. If a lock cannot 
+    be obtained the particular URL is skipped.
+  - It uses both a thread and a connection pool, to make downloads more efficient.
+  - As a default, it checks for freshness of a local copy if there already is one,
+    so an up-to-date image is not re-downloaded. Use the ``--force`` switch to force
+    downloading images anyway.
+  - Having said that, you might run into issues with URL files with
+    hundreds of thousand or even millions of entries.
 
 
 Instructions
 ============
 
-Installing
-----------
+Installation
+-------------
 - The script requires Python > 3.3.
 - I recommend setting up a virtualenv.
 - Run ``pip install -r requirements.txt`` to install dependencies.
@@ -38,17 +54,17 @@ Installing
 Running
 -------
 
-- Basic invocation: ``'python src/image_loader/loader.py <urls file> <outdir>'``. 
+- Basic invocation: ``'python src/image_loader/loader.py <urls_file> <outdir>'``. 
   Use ``--help`` for full syntax.
 - I recommend using at least the ``-v`` flag, otherwise the script will run silently.
 - Constants, like the number of threads or connections, are in a dedicated section
   at the top of the script.
 - Run ``pytest tests`` to run the automatic tests.
 
-Deploying
----------
+Deployment
+----------
 
-- Use ``'python setup.py install'`` from the root directory to create distribution for the tool.
+- Use ``'python setup.py install'`` from the root directory to create a distribution for the tool.
 
 
 Note
