@@ -59,6 +59,7 @@ Running
 -------
 
 - Basic invocation
+
   - in a source environment: ``'python src/image_loader/loader.py <urls_file> <outdir>'`` 
   - in a deploy environment: ``'loader <urls_file> <outdir>'``
 
