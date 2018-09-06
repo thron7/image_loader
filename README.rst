@@ -57,17 +57,24 @@ Installation
 Running
 -------
 
-- Basic invocation: ``'python src/image_loader/loader.py <urls_file> <outdir>'``. 
+- Basic invocation
+  - in a source environment: ``'python src/image_loader/loader.py <urls_file> <outdir>'`` 
+  - in a deploy environment: ``'loader.py <urls_file> <outdir>'``
+
   Use ``--help`` for full syntax.
 - I recommend using at least the ``-v`` flag, otherwise the script will run silently.
-- Constants, like the number of threads or connections, are in a dedicated section
+- Customizable constants, like the number of threads or connections, are in a dedicated section
   at the top of the script.
-- Run ``pytest tests`` to run the automatic tests.
+- Run ``'pip install pytest pytest-cov'`` and ``'pytest tests'`` in a source
+  environment to run the automated tests.
 
 Deployment
 ----------
 
-- Use ``'python setup.py install'`` from the root directory to create a distribution for the tool.
+- Use ``'python setup.py bdist_egg'`` or ``'... bdist_wheel'``, depending on
+  your preferences, from the root directory to create a distribution for the tool.
+- Copy the resulting ``dist/image_loader-*.{egg|whl}`` to a target machine.
+- Install it there with ``easy_install`` or ``pip``, respectively.
 
 
 Note

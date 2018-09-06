@@ -15,8 +15,6 @@ from setuptools import setup
 entry_points = """
 [console_scripts]
 loader = image_loader.loader:run
-# For example:
-# fibonacci = image_loader.skeleton:run
 """
 
 
