@@ -59,7 +59,7 @@ Running
 
 - Basic invocation
   - in a source environment: ``'python src/image_loader/loader.py <urls_file> <outdir>'`` 
-  - in a deploy environment: ``'loader.py <urls_file> <outdir>'``
+  - in a deploy environment: ``'loader <urls_file> <outdir>'``
 
   Use ``--help`` for full syntax.
 - I recommend using at least the ``-v`` flag, otherwise the script will run silently.
