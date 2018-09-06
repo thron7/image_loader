@@ -106,9 +106,6 @@ def download_url(pool, url, outdir, force):
                         , preload_content = False
                         , headers = headers
                     )
-        # TODO: 
-        # - fork out multiple threads, to load images in parallel?
-        # - slow down requests to the same server, so not to overrun it with requests
         if response and response.status == 200:
             process_incoming(response, outdir)
         elif response and response.status == 304:

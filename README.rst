@@ -21,6 +21,7 @@ Description
 - The tool does not take specific actions to set the access rights of the
   downloaded file. If the images are e.g. saved in a Web server's document tree
   it is the user's responsibility that the files are readable by the Web server.
+- It also does not check for ``robots.txt`` files on the server side.
 - Scaling
   - The runtime complexity of the tool directly depends on the size of the input
     file and to some extend on the diversity and responsiveness of the servers
@@ -31,10 +32,12 @@ Description
   - On downloading an image the local file is locked, so concurrent downloads of the same
     file will not interfer with each other. This might be interesting if one
     instance of the script is started while another is still running with the same
-    arguments, which might occur e.g. when it is invoked via cron and a single
+    arguments, e.g. when it is invoked via cron and a single
     run takes longer than the time until the next invocation. If a lock cannot 
     be obtained the particular URL is skipped.
   - It uses both a thread and a connection pool, to make downloads more efficient.
+  - It does not, though, manage server load other than through the connection
+    pools (e.g. no throttling).
   - As a default, it checks for freshness of a local copy if there already is one,
     so an up-to-date image is not re-downloaded. Use the ``--force`` switch to force
     downloading images anyway.
