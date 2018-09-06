@@ -52,11 +52,6 @@ def test_get_out_file():
     assert outdir + '/' == aut.get_out_file('', outdir)
     assert 'foo.png' == aut.get_out_file(url, '')
 
-#import functools
-#def test_partial(monkeypatch):
-#    with monkeypatch.context() as m:
-#        m.setattr(functools, "partial", 3)
-#        assert functools.partial == 3
 
 def test_get_url_iter():
     result = aut.get_url_iter("README.rst")
@@ -110,4 +105,3 @@ def test_download_url(tmpdir, monkeypatch):
         aut.download_url(pool, url, outdir, True)
         t2 = get_mtime(localpath)
         assert t2 > t1
-        # for some weird reason, my HTTPResponse cannot be `.read()`, so no check on file size and content
