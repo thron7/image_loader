@@ -23,6 +23,7 @@ Description
   it is the user's responsibility that the files are readable by the Web server.
 - It also does not check for ``robots.txt`` files on the server side.
 - Scaling
+
   - The runtime complexity of the tool directly depends on the size of the input
     file and to some extend on the diversity and responsiveness of the servers
     that host the source images.
@@ -42,7 +43,7 @@ Description
     so an up-to-date image is not re-downloaded. Use the ``--force`` switch to force
     downloading images anyway.
   - Having said that, you might run into issues with URL files with
-    hundreds of thousand or even millions of entries.
+    tenths of thousand or more entries.
 
 
 Instructions
