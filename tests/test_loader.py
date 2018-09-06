@@ -6,6 +6,7 @@ import numbers
 import io
 import os
 import stat
+import time
 import image_loader.loader as aut
 from functools import partial
 import urllib3
@@ -78,15 +79,13 @@ def test_assert_destdir(tmpdir):
 
 
 def fake_request(*args, **kwargs):
-    response = urllib3.response.HTTPResponse()
-    print(kwargs)
     mod_since = maybe(kwargs)['headers']['If-Modified-Since']
-    if mod_since.is_some():
-        response.status = 304  # pretend nothing has changed
-    else:
+    if mod_since.is_none() or mod_since.get() == 'Thu, 01 Jan 1970 00:00:00 GMT':
+        response = urllib3.response.HTTPResponse(body=open("README.rst", "rb"), request_method=args[1], request_url=args[2])
         response.status = 200
-        data = open("README.rst", "r").read()
-        response.body = data
+    else:
+        response = urllib3.response.HTTPResponse(request_method=args[1], request_url=args[2])
+        response.status = 304  # pretend nothing has changed
     response.headers.update({'Content-Type':'image/jpg'})
     return response
 
@@ -95,20 +94,20 @@ def get_mtime(localpath):
     if not os.path.exists(localpath):
         return -1
     else:
-        return os.stat(localpath).st_mode
+        return os.stat(localpath).st_mtime
 
 
 def test_download_url(tmpdir, monkeypatch):
     pool = urllib3.PoolManager()
     url = "foo.jpg"
-    outdir = os.path.join(tmpdir, "imgs")
+    outdir = tmpdir
     localpath = os.path.join(outdir, url)
     with monkeypatch.context() as m:
         m.setattr(urllib3.PoolManager, "request", fake_request)
         aut.download_url(pool, url, outdir, False)
-        print(localpath)
         t1 = get_mtime(localpath)
         assert t1 > 0
         aut.download_url(pool, url, outdir, True)
         t2 = get_mtime(localpath)
         assert t2 > t1
+        # for some weird reason, my HTTPResponse cannot be `.read()`, so no check on file size and content
