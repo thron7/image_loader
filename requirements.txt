@@ -5,4 +5,4 @@
 # numpy==1.13.3
 # scipy==1.0
 pymaybe==0.1.6
-urllib3==1.23
+urllib3==1.24.2
